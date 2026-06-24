@@ -2940,21 +2940,84 @@ svg#v28Radar{
       return new Blob(chunks,{type:'application/pdf'});
     }
 
+    function pdfCanvasToJpegBytes(canvas, quality){
+      const b64=canvas.toDataURL('image/jpeg', quality || 0.94).split(',')[1];
+      const bin=atob(b64);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      return {bytes,width:canvas.width,height:canvas.height};
+    }
+
+    async function pdfCaptureVisibleResults(){
+      const report=document.querySelector('.results-screen .results-mockup') || document.querySelector('.results-mockup');
+      if(!report) throw new Error('Results block not found');
+
+      await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+      if(document.fonts && document.fonts.ready) await document.fonts.ready;
+
+      document.documentElement.classList.add('pdf-direct-export-mode');
+      document.body.classList.add('pdf-direct-export-mode');
+      report.classList.add('pdf-export-target');
+
+      const previousScrollX=window.scrollX || window.pageXOffset || 0;
+      const previousScrollY=window.scrollY || window.pageYOffset || 0;
+      window.scrollTo(0,0);
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+      try{
+        const rect=report.getBoundingClientRect();
+        const canvas=await window.html2canvas(report,{
+          backgroundColor:'#ffffff',
+          scale:Math.min(2, window.devicePixelRatio || 1.5),
+          useCORS:true,
+          allowTaint:false,
+          logging:false,
+          width:Math.ceil(rect.width),
+          height:Math.ceil(report.scrollHeight),
+          windowWidth:Math.max(document.documentElement.scrollWidth, Math.ceil(rect.width)),
+          windowHeight:Math.max(document.documentElement.scrollHeight, Math.ceil(report.scrollHeight)),
+          scrollX:0,
+          scrollY:0
+        });
+        return canvas;
+      }finally{
+        report.classList.remove('pdf-export-target');
+        document.body.classList.remove('pdf-direct-export-mode');
+        document.documentElement.classList.remove('pdf-direct-export-mode');
+        window.scrollTo(previousScrollX,previousScrollY);
+      }
+    }
+
+    function pdfSplitCanvasToLandscapePages(sourceCanvas){
+      const pageRatio=595/842; // A4 landscape: height / width
+      const sliceHeight=Math.floor(sourceCanvas.width * pageRatio);
+      const pages=[];
+      for(let y=0;y<sourceCanvas.height;y+=sliceHeight){
+        const pageCanvas=document.createElement('canvas');
+        pageCanvas.width=sourceCanvas.width;
+        pageCanvas.height=sliceHeight;
+        const ctx=pageCanvas.getContext('2d');
+        ctx.fillStyle='#ffffff';
+        ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
+        ctx.drawImage(
+          sourceCanvas,
+          0,y,sourceCanvas.width,Math.min(sliceHeight,sourceCanvas.height-y),
+          0,0,pageCanvas.width,Math.min(sliceHeight,sourceCanvas.height-y)
+        );
+        pages.push(pageCanvas);
+      }
+      return pages;
+    }
+
     async function downloadPdfReport(){
       updateAll();
       const btn=document.getElementById('exportBtn');
       const oldText=btn ? btn.innerHTML : '';
       if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-regular fa-file-pdf"></i> Формируем PDF...';}
       try{
-        if(document.fonts && document.fonts.ready) await document.fonts.ready;
-        const data=pdfBuildData();
-        const canvases=pdfRenderPages(data);
-        const jpegs=canvases.map(canvas=>{
-          const b64=canvas.toDataURL('image/jpeg',0.92).split(',')[1];
-          const bin=atob(b64); const bytes=new Uint8Array(bin.length);
-          for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-          return {bytes,width:canvas.width,height:canvas.height};
-        });
+        const screenshotCanvas=await pdfCaptureVisibleResults();
+        const pageCanvases=pdfSplitCanvasToLandscapePages(screenshotCanvas);
+        const jpegs=pageCanvases.map(canvas=>pdfCanvasToJpegBytes(canvas,0.94));
         const blob=pdfMakeFromJpegs(jpegs,842,595);
         const company=(document.querySelector('[name="company"]')||{}).value || 'company';
         pdfDownloadBlob(blob,`sber2b-digital-maturity-report-${safeFilePart(company)}.pdf`);
