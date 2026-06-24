@@ -7341,3 +7341,35 @@ body{font-family:"SB Sans Display","Inter",Arial,sans-serif!important;}
 #diagnostic .form-shell{box-shadow:none!important;border-radius:20px!important;}
 .result-section.products-card,.result-section.result-table-card{display:none!important;}
 .result-bottom-note{margin-top:18px!important;}
+
+
+/* PDF screenshot export: PDF uses the exact visible results layout instead of a separately drawn canvas report. */
+html.pdf-direct-export-mode,
+body.pdf-direct-export-mode{
+  background:#fff !important;
+}
+.pdf-direct-export-mode .results-actions,
+.pdf-direct-export-mode .result-form-nav,
+.pdf-direct-export-mode .dmq-json-details,
+.pdf-direct-export-mode .result-hidden-meta{
+  display:none !important;
+}
+.pdf-export-target{
+  background:#fff !important;
+  color:#0b1535 !important;
+  overflow:visible !important;
+}
+.pdf-export-target .results-header{
+  margin-bottom:16px !important;
+}
+.pdf-export-target .result-card,
+.pdf-export-target .dmq-v28-card,
+.pdf-export-target .result-section,
+.pdf-export-target .products-grid article{
+  break-inside:avoid !important;
+  page-break-inside:avoid !important;
+}
+.pdf-export-target svg,
+.pdf-export-target img{
+  max-width:100%;
+}
