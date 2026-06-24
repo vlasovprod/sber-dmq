@@ -2948,6 +2948,127 @@ svg#v28Radar{
       return {bytes,width:canvas.width,height:canvas.height};
     }
 
+
+
+    function pdfDrawWrappedCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines){
+      const words=String(text || '').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+      let line='';
+      let lines=[];
+      for(const word of words){
+        const test=line ? line+' '+word : word;
+        if(ctx.measureText(test).width > maxWidth && line){
+          lines.push(line);
+          line=word;
+          if(maxLines && lines.length >= maxLines) break;
+        }else{
+          line=test;
+        }
+      }
+      if(line && (!maxLines || lines.length < maxLines)) lines.push(line);
+      if(maxLines && lines.length > maxLines) lines=lines.slice(0,maxLines);
+      lines.forEach((ln,i)=>ctx.fillText(ln,x,y+i*lineHeight));
+      return y+lines.length*lineHeight;
+    }
+
+    function pdfMountGaugeCanvasFallback(){
+      const card=document.querySelector('.results-screen .result-gauge-card') || document.querySelector('.result-gauge-card');
+      if(!card) return function(){};
+      const rect=card.getBoundingClientRect();
+      const w=Math.max(320, Math.ceil(rect.width || card.offsetWidth || 420));
+      const h=Math.max(420, Math.ceil(rect.height || card.offsetHeight || 520));
+      const ratio=2;
+      const canvas=document.createElement('canvas');
+      canvas.width=w*ratio;
+      canvas.height=h*ratio;
+      canvas.style.position='absolute';
+      canvas.style.inset='0';
+      canvas.style.width='100%';
+      canvas.style.height='100%';
+      canvas.style.zIndex='1000';
+      canvas.style.pointerEvents='none';
+      canvas.style.borderRadius='12px';
+      canvas.setAttribute('data-pdf-gauge-fallback','1');
+
+      const ctx=canvas.getContext('2d');
+      ctx.scale(ratio,ratio);
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(0,0,w,h);
+
+      const score=parseInt((document.getElementById('v28ScoreValue')||{}).textContent || '0',10) || 0;
+      const level=((document.getElementById('v28ScoreLevel')||{}).textContent || 'Уровень зрелости').trim();
+      const note=((document.getElementById('v28ScoreNote')||{}).textContent || '').trim();
+      const scoreColor=(typeof v28ScoreColor==='function') ? v28ScoreColor(score) : '#ffd23f';
+
+      ctx.fillStyle='#0b1535';
+      ctx.font='900 18px Arial, sans-serif';
+      pdfDrawWrappedCanvasText(ctx,'1. Шкала зрелости управления',22,34,w-44,22,2);
+
+      const cx=w/2;
+      const cy=Math.min(235, h*0.46);
+      const r=Math.min(w*0.34, 145);
+      ctx.lineWidth=24;
+      ctx.lineCap='round';
+      ctx.strokeStyle='#e8ecf3';
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,Math.PI,0,false);
+      ctx.stroke();
+
+      const grad=ctx.createLinearGradient(cx-r,0,cx+r,0);
+      grad.addColorStop(0,'#d71920');
+      grad.addColorStop(.36,'#f36f21');
+      grad.addColorStop(.56,'#ffd23f');
+      grad.addColorStop(1,'#1eb43f');
+      ctx.strokeStyle=grad;
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,Math.PI,Math.PI+(score/100)*Math.PI,false);
+      ctx.stroke();
+
+      const angle=Math.PI-(score/100)*Math.PI;
+      const kx=cx+Math.cos(angle)*r;
+      const ky=cy-Math.sin(angle)*r;
+      ctx.fillStyle='#fff';
+      ctx.strokeStyle=scoreColor;
+      ctx.lineWidth=6;
+      ctx.beginPath();
+      ctx.arc(kx,ky,12,0,Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.textAlign='center';
+      ctx.fillStyle=scoreColor;
+      ctx.font='900 56px Arial, sans-serif';
+      ctx.fillText(String(score),cx,cy-12);
+      ctx.fillStyle='#0b1535';
+      ctx.font='800 20px Arial, sans-serif';
+      ctx.fillText('из 100',cx,cy+20);
+      ctx.fillStyle=scoreColor;
+      ctx.font='900 20px Arial, sans-serif';
+      ctx.fillText(level,cx,cy+56);
+
+      ctx.textAlign='center';
+      ctx.fillStyle='#66728a';
+      ctx.font='17px Arial, sans-serif';
+      const lines=[];
+      const words=note.replace(/\s+/g,' ').split(' ').filter(Boolean);
+      let line='';
+      const maxW=w-60;
+      for(const word of words){
+        const test=line?line+' '+word:word;
+        if(ctx.measureText(test).width>maxW && line){lines.push(line);line=word;} else line=test;
+      }
+      if(line) lines.push(line);
+      lines.slice(0,4).forEach((ln,i)=>ctx.fillText(ln,cx,cy+105+i*23));
+
+      const oldPosition=card.style.position;
+      if(getComputedStyle(card).position==='static') card.style.position='relative';
+      card.appendChild(canvas);
+      return function(){
+        canvas.remove();
+        card.style.position=oldPosition;
+      };
+    }
+
     async function pdfCaptureVisibleResults(){
       const report=document.querySelector('.results-screen .results-mockup') || document.querySelector('.results-mockup');
       if(!report) throw new Error('Results block not found');
@@ -2958,6 +3079,7 @@ svg#v28Radar{
       document.documentElement.classList.add('pdf-direct-export-mode');
       document.body.classList.add('pdf-direct-export-mode');
       report.classList.add('pdf-export-target');
+      const cleanupGaugeFallback=pdfMountGaugeCanvasFallback();
 
       const previousScrollX=window.scrollX || window.pageXOffset || 0;
       const previousScrollY=window.scrollY || window.pageYOffset || 0;
@@ -2981,6 +3103,7 @@ svg#v28Radar{
         });
         return canvas;
       }finally{
+        if(typeof cleanupGaugeFallback === 'function') cleanupGaugeFallback();
         report.classList.remove('pdf-export-target');
         document.body.classList.remove('pdf-direct-export-mode');
         document.documentElement.classList.remove('pdf-direct-export-mode');
