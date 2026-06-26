@@ -1,4 +1,4 @@
-// Sber2B DMQ logic extracted for Tilda.
+//  DMQ logic extracted for Tilda.
 // Upload this file as dmq.js and connect it after dmq.html/dmq.css.
 
 const industryDepartmentsMap = {
@@ -1556,6 +1556,24 @@ const industryDepartmentsMap = {
       return Math.max(0.55,Math.min(0.9,+(0.55+margin/3).toFixed(2)));
     }
 
+    function consultingProbabilities(s){
+      // Формула вероятностей для интерфейса: считаем скоринг по 5 доменам и переводим его в вероятности через softmax.
+      // Чем выше зрелость процессов и данных, тем выше вероятность ИТ/ИИ-консалтинга.
+      // Чем ниже процессы/данные/стратегия, тем выше вероятность операционного консалтинга.
+      // Чем выше процессы при слабой стратегии/технологиях, тем выше вероятность архитектурного консалтинга.
+      const raw = {
+        'ИТ/ИИ-консалтинг': 0.45*(s.process||0) + 0.35*(s.data||0) + 0.15*(s.tech||0) + 0.05*(s.competence||0),
+        'Операционный консалтинг': 0.55*(5-(s.process||0)) + 0.20*(5-(s.data||0)) + 0.15*(5-(s.strategy||0)) + 0.10*(5-(s.competence||0)),
+        'Архитектурный консалтинг': 0.30*(s.process||0) + 0.35*(5-(s.strategy||0)) + 0.25*(5-(s.tech||0)) + 0.10*(5-(s.data||0))
+      };
+      const maxRaw = Math.max(...Object.values(raw));
+      const exp = Object.fromEntries(Object.entries(raw).map(([type,score]) => [type, Math.exp(score-maxRaw)]));
+      const total = Object.values(exp).reduce((a,b)=>a+b,0) || 1;
+      return Object.entries(exp)
+        .map(([type,value]) => ({ type, probability: +(value/total).toFixed(4), percent: Math.round(value/total*100) }))
+        .sort((a,b)=>b.probability-a.probability);
+    }
+
     function reco(s,o){
       const t=decisionTreeMvp.thresholds;
       let type, rulePath;
@@ -1583,16 +1601,21 @@ const industryDepartmentsMap = {
         }
       }
 
+      const probabilities = consultingProbabilities(s);
+      const topTypes = probabilities.slice(0,2);
+      type = topTypes[0]?.type || type;
       const copy=consultingCopy[type];
       return{
         type,
+        topTypes,
+        probabilities,
         priority:copy.priority,
         includes:copy.includes,
         icon:copy.icon,
-        model:'Decision Tree по 5 доменам',
+        model:'Decision Tree по 5 доменам + softmax-ранжирование топ-2',
         model_version:decisionTreeMvp.version,
         rule_path:rulePath,
-        confidence:treeConfidence(s,type)
+        confidence:topTypes[0]?.probability || treeConfidence(s,type)
       };
     }
     function hyps(s){
@@ -2328,16 +2351,13 @@ function productUrl(name){
       v28RenderPriorities(s);
       v28RenderContext();
       v28UpdateFlipComments(s, score);
+      const topTypes = recoObj?.topTypes || (recoObj?.type ? [{type:recoObj.type}] : []);
       const recoTypeNode = document.getElementById('v28RecoType');
-      if(recoTypeNode) recoTypeNode.textContent = recoObj?.type || 'Заполните форму';
-      const recoIconNode = document.getElementById('v28RecoIcon');
-      if(recoIconNode && recoObj?.icon){ recoIconNode.innerHTML = recoObj.icon; if(window.ensureAllIcons) window.ensureAllIcons(); }
-      const recoTextNode = document.getElementById('v28RecoText');
-      if(recoTextNode) recoTextNode.textContent = recoObj?.priority || 'После прохождения диагностики здесь появится подходящий формат консультации и главный фокус работ.';
-      const includesNode = document.getElementById('v28RecoIncludes');
-      if(includesNode && recoObj?.includes){
-        includesNode.innerHTML = recoObj.includes.map(x => `<li>${x}</li>`).join('');
-      }
+      if(recoTypeNode) recoTypeNode.textContent = topTypes[0]?.type || 'Заполните форму';
+      const recoType1Node = document.getElementById('v28RecoType1');
+      if(recoType1Node) recoType1Node.textContent = topTypes[0]?.type || 'Заполните форму';
+      const recoType2Node = document.getElementById('v28RecoType2');
+      if(recoType2Node) recoType2Node.textContent = topTypes[1]?.type || '—';
     }
 
     function updateAll(){
@@ -2864,8 +2884,10 @@ svg#v28Radar{
         industry:pdfGetText('v28IndustryLabel','—'),
         department:pdfGetText('v28DepartmentLabel','—'),
         score, level:pdfGetText('v28ScoreLevel','—'), note:pdfGetText('v28ScoreNote','—'),
-        recoType:pdfGetText('v28RecoType','—'), recoText:pdfGetText('v28RecoText','—'),
-        includes:[...document.querySelectorAll('#v28RecoIncludes li')].map(li=>li.innerText.trim()).filter(Boolean),
+        recoTypes:[pdfGetText('v28RecoType1','—'), pdfGetText('v28RecoType2','—')].filter(x=>x && x !== '—'),
+        recoType:pdfGetText('v28RecoType1', pdfGetText('v28RecoType','—')),
+        recoText:'',
+        includes:[],
         domains, bench,
         benchmarkIndustry:pdfGetText('v28BenchmarkIndustry','—'), benchmarkUser:pdfGetText('v28BenchmarkUser','—')
       };
@@ -2886,9 +2908,9 @@ svg#v28Radar{
       pdfDrawCard(ctx,60,220,490,430); pdfDrawCard(ctx,590,220,420,430); pdfDrawCard(ctx,1050,220,640,430);
       ctx.fillStyle='#0b1535';ctx.font='900 25px Arial';ctx.fillText('1. Шкала зрелости управления',90,270);pdfDrawGauge(ctx,95,285,390,data.score);
       ctx.fillStyle='#008a52';ctx.font='900 24px Arial';ctx.textAlign='center';ctx.fillText(data.level,305,600);ctx.textAlign='left';ctx.fillStyle='#24324b';ctx.font='19px Arial';pdfWrapText(ctx,data.note,95,635,390,25,3);
-      ctx.fillStyle='#0b1535';ctx.font='900 25px Arial';ctx.fillText('3. Рекомендованный тип консалтинга',620,270);
-      ctx.fillStyle='#eefaf4';pdfRoundRect(ctx,735,300,120,120,60,true,false);ctx.fillStyle='#00a651';ctx.font='900 58px Arial';ctx.textAlign='center';ctx.fillText('✓',795,378);ctx.textAlign='left';
-      ctx.fillStyle='#0b1535';ctx.font='900 28px Arial';pdfWrapText(ctx,data.recoType,620,465,340,34,2);ctx.fillStyle='#24324b';ctx.font='19px Arial';pdfWrapText(ctx,data.recoText,620,535,340,25,4);
+      ctx.fillStyle='#0b1535';ctx.font='900 25px Arial';ctx.fillText('3. Рекомендованные типы консалтинга',620,270);
+      const pdfRecoTypes = data.recoTypes && data.recoTypes.length ? data.recoTypes : [data.recoType];
+      pdfRecoTypes.slice(0,2).forEach((name,i)=>{const y=325+i*92;ctx.fillStyle='#f6f8fa';pdfRoundRect(ctx,620,y,340,64,16,true,true);ctx.fillStyle='#0b1535';ctx.font='900 23px Arial';pdfWrapText(ctx,name,642,y+39,296,28,1);});
       ctx.fillStyle='#0b1535';ctx.font='900 25px Arial';ctx.fillText('2. Профиль зрелости доменов',1080,270);pdfDrawRadar(ctx,1080,295,560,310,data.domains,data.bench);
       ctx.font='18px Arial';ctx.fillStyle='#00a651';ctx.fillText('— Ваша компания',1180,610);ctx.fillStyle='#65758f';ctx.fillText('- - Отраслевой бенчмарк',1370,610);
       ctx.fillStyle='#f8fafc';pdfRoundRect(ctx,60,700,1630,210,18,true,true);ctx.fillStyle='#0b1535';ctx.font='900 28px Arial';ctx.fillText('Сравнение с отраслевым бенчмарком',90,752);
@@ -4254,4 +4276,20 @@ document.addEventListener('DOMContentLoaded', function(){
   window.addEventListener('resize', sendHeight);
   document.addEventListener('click', function(){ setTimeout(sendHeight,150); setTimeout(sendHeight,600); });
   document.addEventListener('input', function(){ setTimeout(sendHeight,150); });
+})();
+
+
+/* --- top-2 consulting card override --- */
+(function(){
+  const style=document.createElement('style');
+  style.id='top2-consulting-card-final';
+  style.textContent=`
+    .results-mockup .result-reco-card{grid-template-columns:1fr !important;grid-template-areas:"title" "types" !important;align-items:start !important;min-height:180px !important;}
+    .results-mockup .result-reco-card .reco-icon,.results-mockup .result-reco-card > p,.results-mockup .result-reco-card .reco-includes{display:none !important;}
+    .results-mockup .result-reco-card h3{grid-area:title !important;margin:0 0 18px !important;}
+    .top-consulting-types{grid-area:types !important;display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:14px !important;width:100% !important;}
+    .consulting-type-item{display:flex !important;align-items:center !important;justify-content:center !important;min-height:76px !important;padding:18px 20px !important;border:1px solid #e3e8f0 !important;border-radius:16px !important;background:#f6f8fa !important;color:#0b1535 !important;font-size:22px !important;font-weight:900 !important;text-align:center !important;line-height:1.18 !important;}
+    @media(max-width:760px){.top-consulting-types{grid-template-columns:1fr !important}.consulting-type-item{font-size:18px !important;}}
+  `;
+  document.head.appendChild(style);
 })();
