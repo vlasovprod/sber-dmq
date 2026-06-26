@@ -1,4 +1,4 @@
-/* Sber2B DMQ styles extracted for Tilda.
+/*  DMQ styles extracted for Tilda.
    Upload this file as dmq.css and connect it before dmq.js. */
 
 /* local font-face removed for Tilda */
@@ -7372,4 +7372,59 @@ body.pdf-direct-export-mode{
 .pdf-export-target svg,
 .pdf-export-target img{
   max-width:100%;
+}
+
+
+/* Top-2 consulting recommendation: only names, no icons/descriptions/work list */
+.results-mockup .result-reco-card{
+  grid-template-columns:1fr !important;
+  grid-template-areas:"title" "types" !important;
+  align-items:start !important;
+  min-height:180px !important;
+}
+.results-mockup .result-reco-card .reco-icon,
+.results-mockup .result-reco-card > p,
+.results-mockup .result-reco-card .reco-includes{
+  display:none !important;
+}
+.results-mockup .result-reco-card h3{
+  grid-area:title !important;
+  margin:0 0 18px !important;
+}
+.top-consulting-types{
+  grid-area:types !important;
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:14px !important;
+  width:100% !important;
+}
+.consulting-type-item{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-height:76px !important;
+  padding:18px 20px !important;
+  border:1px solid #e3e8f0 !important;
+  border-radius:16px !important;
+  background:#f6f8fa !important;
+  color:#0b1535 !important;
+  font-size:22px !important;
+  font-weight:900 !important;
+  text-align:center !important;
+  line-height:1.18 !important;
+}
+.visually-hidden{
+  position:absolute !important;
+  width:1px !important;
+  height:1px !important;
+  padding:0 !important;
+  margin:-1px !important;
+  overflow:hidden !important;
+  clip:rect(0,0,0,0) !important;
+  white-space:nowrap !important;
+  border:0 !important;
+}
+@media(max-width:760px){
+  .top-consulting-types{grid-template-columns:1fr !important;}
+  .consulting-type-item{font-size:18px !important;}
 }
