@@ -48,8 +48,8 @@
     }
    #diagnostic {
       max-width: 1440px;
-      margin: 40px auto;
-      padding: 0 32px;
+      margin: 40px;
+      padding: 32px;
    }
     button,input,select,textarea{font:inherit}
     a{color:inherit}
