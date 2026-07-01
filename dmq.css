@@ -1,3 +1,7 @@
+/* Sber2B DMQ styles extracted for Tilda.
+   Upload this file as dmq.css and connect it before dmq.js. */
+
+/* local font-face removed for Tilda */
     :root{
       --bg:#032f31;
       --bg2:#001f22;
@@ -46,11 +50,6 @@
       background-size:54px 54px;
       mask-image:linear-gradient(180deg,rgba(0,0,0,.75),transparent 75%);
     }
-   #diagnostic {
-      max-width: 1440px;
-      margin: 40px;
-      padding: 32px;
-   }
     button,input,select,textarea{font:inherit}
     a{color:inherit}
     .container{max-width:var(--container);margin:0 auto;padding:0 24px;position:relative;z-index:1}
@@ -999,7 +998,6 @@
       font-size:18px;
       margin-top:10px;
     }
-
     .dashboard-gauge__level{
       position:absolute;
       top:73%;
@@ -5000,7 +4998,6 @@
   .dmq-v28-radar-legend span{font-size:13px !important;}
 }
 
-
 /*  v4: combined maturity + consulting card, huge side-by-side radar */
 .dmq-v28-top-grid{
   display:grid !important;
@@ -7000,7 +6997,6 @@ svg#v28Radar{
   }
 }
 
-
 /* --- extracted style block --- */
 
 
@@ -7337,9 +7333,37 @@ svg#v28Radar{
 html,body{margin:0!important;padding:0!important;background:#fff!important;overflow-x:hidden!important;min-height:auto!important;}
 body:before,.top,.hero,#solutions,#partners,#lead,.footer{display:none!important;}
 body{font-family:"SB Sans Display","Inter",Arial,sans-serif!important;}
-#diagnostic{display:block!important;width:100%!important;padding:0!important;margin:0!important;background:#fff!important;}
-#diagnostic>.container{max-width:none!important;width:100%!important;padding:0!important;}
-#diagnostic .form-shell{box-shadow:none!important;border-radius:20px!important;}
+#diagnostic{
+    display:block!important;
+    width:100%!important;
+    padding:48px 24px!important;
+    margin:0!important;
+    background:#fff!important;
+}
+#diagnostic>.container{
+    width:100%!important;
+    max-width:1440px!important;
+    margin:0 auto!important;
+    padding:0!important;
+}
+#diagnostic .diagnostic{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0 auto!important;
+}
+#diagnostic .form-shell{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0 auto!important;
+    padding:28px!important;
+    box-shadow:0 16px 40px rgba(16,24,40,.06)!important;
+    border-radius:24px!important;
+}
+@media(max-width:768px){
+    #diagnostic{padding:20px 12px!important;}
+    #diagnostic>.container{max-width:100%!important;}
+    #diagnostic .form-shell{padding:18px!important;border-radius:18px!important;}
+}
 .result-section.products-card,.result-section.result-table-card{display:none!important;}
 .result-bottom-note{margin-top:18px!important;}
 
@@ -7376,56 +7400,44 @@ body.pdf-direct-export-mode{
 }
 
 
-/* Top-2 consulting recommendation: only names, no icons/descriptions/work list */
-.results-mockup .result-reco-card{
-  grid-template-columns:1fr !important;
-  grid-template-areas:"title" "types" !important;
-  align-items:start !important;
-  min-height:180px !important;
+/* --- GitHub Pages centered layout fix --- */
+html, body {
+    margin:0 !important;
+    padding:0 !important;
+    background:#fff !important;
+    overflow-x:hidden !important;
 }
-.results-mockup .result-reco-card .reco-icon,
-.results-mockup .result-reco-card > p,
-.results-mockup .result-reco-card .reco-includes{
-  display:none !important;
+#diagnostic {
+    width:100% !important;
+    margin:0 !important;
+    padding:48px 24px !important;
+    background:#fff !important;
 }
-.results-mockup .result-reco-card h3{
-  grid-area:title !important;
-  margin:0 0 18px !important;
+#diagnostic > .container {
+    width:100% !important;
+    max-width:1440px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    padding-left:0 !important;
+    padding-right:0 !important;
 }
-.top-consulting-types{
-  grid-area:types !important;
-  display:grid !important;
-  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-  gap:14px !important;
-  width:100% !important;
+#diagnostic .diagnostic,
+#diagnostic .form-shell {
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
 }
-.consulting-type-item{
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  min-height:76px !important;
-  padding:18px 20px !important;
-  border:1px solid #e3e8f0 !important;
-  border-radius:16px !important;
-  background:#f6f8fa !important;
-  color:#0b1535 !important;
-  font-size:22px !important;
-  font-weight:900 !important;
-  text-align:center !important;
-  line-height:1.18 !important;
+#diagnostic .form-shell {
+    padding:28px !important;
+    border-radius:24px !important;
 }
-.visually-hidden{
-  position:absolute !important;
-  width:1px !important;
-  height:1px !important;
-  padding:0 !important;
-  margin:-1px !important;
-  overflow:hidden !important;
-  clip:rect(0,0,0,0) !important;
-  white-space:nowrap !important;
-  border:0 !important;
-}
-@media(max-width:760px){
-  .top-consulting-types{grid-template-columns:1fr !important;}
-  .consulting-type-item{font-size:18px !important;}
+@media (max-width:768px) {
+    #diagnostic {
+        padding:20px 12px !important;
+    }
+    #diagnostic .form-shell {
+        padding:18px !important;
+        border-radius:18px !important;
+    }
 }
