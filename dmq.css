@@ -7441,3 +7441,9 @@ html, body {
         border-radius:18px !important;
     }
 }
+.result-reco-card > h4,
+.result-reco-card > p,
+.result-reco-card .reco-icon,
+.result-reco-card .reco-includes {
+    display: none !important;
+}
