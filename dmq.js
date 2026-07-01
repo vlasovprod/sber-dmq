@@ -4252,7 +4252,14 @@ document.addEventListener('DOMContentLoaded', function(){
       btn.onclick=function(e){ e.preventDefault(); window.dmqSetStepSafe(btn.getAttribute('data-step')); };
     });
     document.querySelectorAll('.next').forEach(function(btn){
-      btn.onclick=function(e){ e.preventDefault(); window.dmqSetStepSafe(dmqGetCurrentStep()+1); };
+      btn.onclick=function(e){ 
+            e.preventDefault();
+            if (btn.classList.contains('start-survey-btn')) {
+                  window.dmqSetStepSafe(1); // второй раздел: Департамент
+                  return;
+            }
+            window.dmqSetStepSafe(dmqGetCurrentStep()+1);
+      };
     });
     document.querySelectorAll('.prev').forEach(function(btn){
       btn.onclick=function(e){ e.preventDefault(); window.dmqSetStepSafe(dmqGetCurrentStep()-1); };
